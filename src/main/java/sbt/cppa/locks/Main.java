@@ -59,6 +59,9 @@ public class Main {
         else if (testLockType.equals("Backoff")) {
             testBackoff(threadsCnt, testDurationSeconds);
         }
+        else if (testLockType.equals("CLH")) {
+            testCLH(threadsCnt, testDurationSeconds);
+        }
         else {
             System.out.printf("[ERROR] Unknown lock type: %s%n", testLockType);
             throw new RuntimeException(String.format("[ERROR] Unknown lock type: %s", testLockType));
