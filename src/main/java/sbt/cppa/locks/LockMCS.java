@@ -20,25 +20,25 @@ public class LockMCS {
         QNode lnode = node.get();
         QNode lqueue = queue.getAndSet(lnode);
         if (lqueue != null) {
-            lnode.locked = true;
-            lqueue.next = lnode;
-            while(lnode.locked) Thread.yield();
+            lnode.locked.set(true);
+            lqueue.next.set(lnode);
+            while(lnode.locked.get()) Thread.yield();
         }
     }
 
     public void unlock() {
         QNode lnode = node.get();
-        if (lnode.next == null) {
+        if (lnode.next.get() == null) {
             if (queue.compareAndSet(lnode, null))
                 return;
-            while(lnode.next == null) Thread.yield();
+            while(lnode.next.get() == null) Thread.yield();
         }
-        lnode.next.locked = false;
-        lnode.next = null;
+        lnode.next.get().locked.set(false);
+        lnode.next.set(null);
     }
 
     private static class QNode {
-        boolean locked = false;
-        QNode   next   = null;
+        AtomicBoolean locked = new AtomicBoolean(false);
+        AtomicReference<QNode> next = new AtomicReference<>(null);
     }
 }
