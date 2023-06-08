@@ -17,20 +17,21 @@ public class LockCLH {
 
     public void lock() {
         QNode cur = current.get();
-        cur.locked = true;
+        cur.locked.set(true);
         QNode prev = tail.getAndSet(cur);
         previous.set(prev);
-        while (prev.locked) {
+
+        while (prev.locked.get()) {
         }
     }
 
     public void unlock() {
         QNode cur = current.get();
-        cur.locked = false;
+        cur.locked.set(false);
         current.set(previous.get());
     }
 
     private static class QNode {
-        volatile boolean locked = false;
+        AtomicBoolean locked = new AtomicBoolean(false);
     }
 }

@@ -41,7 +41,7 @@ public class Main {
         System.out.println("Please, enter test duration (seconds):");
         final int testDurationSeconds = in.nextInt();
 
-        System.out.println("Please, enter lock type (TAS, TTAS, Backoff):");
+        System.out.println("Please, enter lock type (TAS, TTAS, Backoff, CLH, MCS):");
         final String testLockType = in.next();
 
         System.out.printf(
@@ -61,6 +61,9 @@ public class Main {
         }
         else if (testLockType.equals("CLH")) {
             testCLH(threadsCnt, testDurationSeconds);
+        }
+        else if (testLockType.equals("MCS")) {
+            testMCS(threadsCnt, testDurationSeconds);
         }
         else {
             System.out.printf("[ERROR] Unknown lock type: %s%n", testLockType);
@@ -244,6 +247,51 @@ public class Main {
         );
 
         for (WorkerCLH worker : workers) {
+            worker.stop();
+        }
+    }
+
+    public static void testMCS(int threadsCnt, int testDurationSeconds) {
+        CyclicBarrier barrier = new CyclicBarrier(threadsCnt+1);
+        LockMCS lock = new LockMCS();
+        ArrayList<WorkerMCS> workers = new ArrayList<>();
+
+        Counter totalLocksCnt = new Counter();
+
+        for (int i = 0; i < threadsCnt; ++i) {
+            WorkerMCS worker = new WorkerMCS(String.valueOf(i), barrier, lock, totalLocksCnt);
+            workers.add(worker);
+            worker.start();
+        }
+
+        long start = System.currentTimeMillis();
+        try {
+            barrier.await();
+        } catch (InterruptedException | BrokenBarrierException e) {
+            throw new RuntimeException(e);
+        }
+
+        try {
+            TimeUnit.SECONDS.sleep(testDurationSeconds);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        lock.lock();
+        int resultLocksCnt = totalLocksCnt.counter;
+        lock.unlock();
+
+        long finish = System.currentTimeMillis();
+        float timeElapsed = (float)(finish - start) / 1000;
+
+        System.out.printf("%d Threads --> Duration: %f Locks called: %d Throughput: %f",
+                threadsCnt,
+                timeElapsed,
+                resultLocksCnt,
+                (float)resultLocksCnt / (float)testDurationSeconds
+        );
+
+        for (WorkerMCS worker : workers) {
             worker.stop();
         }
     }
